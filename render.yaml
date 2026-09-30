@@ -1,0 +1,50 @@
+# Render Infrastructure Blueprint for EyeRaksha
+# Deploying 3 distinct microservices: React Static Site, Node.js Backend, Python Screening Service
+
+services:
+  # SERVICE 1: React / Vite Frontend
+  - type: web
+    name: eyeraksha-frontend
+    runtime: static
+    buildCommand: npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: eyeraksha-backend
+          property: url
+          suffix: /api
+
+  # SERVICE 2: Node.js Backend API
+  - type: web
+    name: eyeraksha-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: node backend/server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: CORS_ORIGIN
+        fromService:
+          type: web
+          name: eyeraksha-frontend
+          property: url
+      - key: MATLAB_SCREENING_ADAPTER_URL
+        fromService:
+          type: web
+          name: eyeraksha-python-service
+          property: url
+          suffix: /api/screen
+
+  # SERVICE 3: Python Screening Service
+  - type: web
+    name: eyeraksha-python-service
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn mock_adapter:app
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: HOST
+        value: 0.0.0.0
